@@ -3,9 +3,10 @@ import requests
 import pandas as pd
 from datetime import datetime
 import time
+import os
 
-# Configuration
-API_BASE_URL = "http://localhost:8000/api/v1"
+# Configuration - Use environment variable or default to localhost
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000/api/v1")
 
 st.set_page_config(
     page_title="TikTok Scraper Admin",

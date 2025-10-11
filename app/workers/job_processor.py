@@ -290,10 +290,10 @@ class JobProcessor:
                 
                 # Otherwise, download using VideoDownloader
                 # Determine output path
-                if job.mode == JobMode.PROFILE.value:
-                    output_dir = Path(settings.DOWNLOAD_DIR) / "profile" / job.value
+                if job.mode == ScrapingMode.PROFILE.value:
+                    output_dir = Path(settings.LOCAL_STORAGE_PATH) / "profile" / job.value
                 else:
-                    output_dir = Path(settings.DOWNLOAD_DIR) / "hashtag" / job.value
+                    output_dir = Path(settings.LOCAL_STORAGE_PATH) / "hashtag" / job.value
                 
                 output_dir.mkdir(parents=True, exist_ok=True)
                 output_path = output_dir / f"{video.id}.mp4"

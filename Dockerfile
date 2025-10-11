@@ -29,5 +29,5 @@ RUN mkdir -p downloads logs credentials
 # Expose ports
 EXPOSE 8000 8501
 
-# Default command
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command - use PORT env var if available, otherwise 8000
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}

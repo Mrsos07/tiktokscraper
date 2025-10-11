@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     g++ \
     curl \
     ffmpeg \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements

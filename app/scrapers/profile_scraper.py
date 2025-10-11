@@ -64,7 +64,8 @@ class ProfileScraper(BaseScraper):
                                 'hashtags': [],
                                 'music_title': None,
                                 'music_author': None,
-                                'video_url': result['file_path'],  # Local file path
+                                'video_url': result['file_path'],  # Local file path for download
+                                'local_path': result['file_path'],  # Also save in local_path
                                 'duration': None,
                                 'raw_data': {}
                             }

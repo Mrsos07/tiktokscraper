@@ -1,5 +1,7 @@
 from typing import List
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.database import get_db
@@ -7,6 +9,7 @@ from app.models.models import Video, VideoStatus
 from app.models.schemas import VideoResponse, VideoQuery, VideoListResponse
 from app.workers.job_processor import JobProcessor
 from app.core.logging import log
+from app.core.config import settings
 
 router = APIRouter(prefix="/videos", tags=["Videos"])
 
@@ -141,6 +144,102 @@ async def retry_video_download(
         raise
     except Exception as e:
         log.error(f"Error retrying video: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{video_id}/download")
+async def download_video(
+    video_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Download video file as binary
+    Returns the video file for download or streaming
+    """
+    try:
+        result = await db.execute(select(Video).where(Video.id == video_id))
+        video = result.scalar_one_or_none()
+        
+        if not video:
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        # Check if video has local path
+        if not video.local_path:
+            raise HTTPException(
+                status_code=404, 
+                detail="Video file not available locally. Video may be uploaded to Drive only."
+            )
+        
+        video_path = Path(video.local_path)
+        
+        # Check if file exists
+        if not video_path.exists():
+            raise HTTPException(
+                status_code=404,
+                detail="Video file not found on disk"
+            )
+        
+        # Return file for download
+        filename = f"{video.author_username}_{video.id}.mp4"
+        
+        return FileResponse(
+            path=str(video_path),
+            media_type="video/mp4",
+            filename=filename,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error downloading video: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{video_id}/stream")
+async def stream_video(
+    video_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Stream video file (for preview in browser)
+    """
+    try:
+        result = await db.execute(select(Video).where(Video.id == video_id))
+        video = result.scalar_one_or_none()
+        
+        if not video:
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        if not video.local_path:
+            raise HTTPException(
+                status_code=404,
+                detail="Video file not available locally"
+            )
+        
+        video_path = Path(video.local_path)
+        
+        if not video_path.exists():
+            raise HTTPException(
+                status_code=404,
+                detail="Video file not found on disk"
+            )
+        
+        # Return file for streaming
+        return FileResponse(
+            path=str(video_path),
+            media_type="video/mp4",
+            headers={
+                "Accept-Ranges": "bytes"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error streaming video: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

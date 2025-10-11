@@ -410,11 +410,9 @@ class JobProcessor:
                 job.progress = int((job.successful_downloads + job.failed_downloads) / job.total_videos * 100)
                 await self.db.commit()
                 
-                # Clean up local file
-                if output_path.exists():
-                    output_path.unlink()
-                
-                log.info(f"Successfully processed video {video.id}")
+                # Keep local file for download endpoint (don't delete)
+                # Files will be cleaned up by a separate cleanup task if needed
+                log.info(f"Successfully processed video {video.id} - File kept at: {output_path}")
                 
             except Exception as e:
                 log.error(f"Error processing video {video.id}: {str(e)}")

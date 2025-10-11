@@ -20,9 +20,10 @@ class DriveUploader:
     
     def __init__(self):
         self.service = None
-        self.folder_id = "1eJ0IpGpy7KrHkh_157n-qBM04WQCCDc_"
-        self.credentials_file = Path("credentials.json")
-        self.token_file = Path("token.pickle")
+        from app.core.config import settings
+        self.folder_id = settings.GOOGLE_DRIVE_ROOT_FOLDER_ID or "1eJ0IpGpy7KrHkh_157n-qBM04WQCCDc_"
+        self.credentials_file = Path(settings.GOOGLE_DRIVE_CREDENTIALS_FILE)
+        self.token_file = Path(settings.GOOGLE_DRIVE_TOKEN_FILE)
     
     def init_service(self):
         """Initialize Google Drive service"""

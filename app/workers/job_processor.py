@@ -312,7 +312,7 @@ class JobProcessor:
                     
                     result = await downloader.download_video(
                         video_data,
-                        local_path,
+                        output_path,
                         no_watermark=job.no_watermark
                     )
                 
@@ -326,10 +326,10 @@ class JobProcessor:
                     await self.db.commit()
                     
                     log.error(f"Failed to download video {video.id}: {error_msg}")
-                    return
+                    continue
                 
                 # Verify file was actually saved
-                if not local_path.exists() or local_path.stat().st_size == 0:
+                if not output_path.exists() or output_path.stat().st_size == 0:
                     error_msg = "File not saved or empty after download"
                     video.status = VideoStatus.FAILED.value
                     video.error_message = error_msg
@@ -343,7 +343,7 @@ class JobProcessor:
                 
                 # Update video with download info
                 video.status = VideoStatus.DOWNLOADED.value
-                video.local_path = str(local_path)
+                video.local_path = str(output_path)
                 video.file_size = result.get('file_size', 0)
                 video.has_watermark = result.get('has_watermark', True)
                 await self.db.commit()
@@ -411,8 +411,8 @@ class JobProcessor:
                 await self.db.commit()
                 
                 # Clean up local file
-                if local_path.exists():
-                    local_path.unlink()
+                if output_path.exists():
+                    output_path.unlink()
                 
                 log.info(f"Successfully processed video {video.id}")
                 

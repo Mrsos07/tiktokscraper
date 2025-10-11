@@ -32,10 +32,11 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./tiktok_scraper.db"
     
     # Google Drive
-    GOOGLE_DRIVE_CREDENTIALS_FILE: str = "./credentials/google_drive_credentials.json"
-    GOOGLE_DRIVE_TOKEN_FILE: str = "./credentials/google_drive_token.json"
+    GOOGLE_DRIVE_CREDENTIALS_FILE: str = "./credentials/credentials.json"
+    GOOGLE_DRIVE_TOKEN_FILE: str = "./credentials/token.pickle"
     GOOGLE_DRIVE_ROOT_FOLDER_ID: Optional[str] = None
     GOOGLE_DRIVE_CREDENTIALS_BASE64: Optional[str] = None  # For cloud deployment
+    GOOGLE_DRIVE_FOLDER_ID: Optional[str] = None  # Specific folder ID for uploads
     
     # TikTok Scraping
     TIKTOK_MAX_VIDEOS_PER_REQUEST: int = 50

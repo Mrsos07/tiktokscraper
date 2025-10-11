@@ -39,15 +39,15 @@ class Settings(BaseSettings):
     
     # TikTok Scraping
     TIKTOK_MAX_VIDEOS_PER_REQUEST: int = 50
-    TIKTOK_REQUEST_DELAY_MIN: float = 2.0
-    TIKTOK_REQUEST_DELAY_MAX: float = 5.0
+    TIKTOK_REQUEST_DELAY_MIN: float = 1.0
+    TIKTOK_REQUEST_DELAY_MAX: float = 3.0
     TIKTOK_MAX_RETRIES: int = 3
     TIKTOK_TIMEOUT: int = 30
     TIKTOK_USE_PLAYWRIGHT_FALLBACK: bool = True
     
     # Rate Limiting
-    RATE_LIMIT_REQUESTS_PER_MINUTE: int = 10
-    RATE_LIMIT_BURST: int = 20
+    RATE_LIMIT_REQUESTS_PER_MINUTE: int = 60
+    RATE_LIMIT_BURST: int = 100
     
     # Proxy
     USE_PROXY: bool = False

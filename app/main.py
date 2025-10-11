@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.logging import log
 from app.models.database import init_db
-from app.api.routes import jobs, videos, scheduler, stats, monitoring
+from app.api.routes import jobs, videos, scheduler, stats, monitoring, cleanup
 
 
 @asynccontextmanager
@@ -33,6 +33,11 @@ async def lifespan(app: FastAPI):
     import asyncio
     asyncio.create_task(auto_scraper.start())
     log.info("Auto Scraper started")
+    
+    # Start cleanup task
+    from app.scheduler.cleanup_task import cleanup_task
+    asyncio.create_task(cleanup_task.start())
+    log.info("Cleanup Task started (deletes files older than 24 hours)")
     
     # Create required directories
     settings.local_storage_path_obj.mkdir(parents=True, exist_ok=True)
@@ -86,6 +91,7 @@ app.include_router(videos.router, prefix="/api/v1")
 app.include_router(scheduler.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 app.include_router(monitoring.router)
+app.include_router(cleanup.router)
 
 
 # Root endpoint

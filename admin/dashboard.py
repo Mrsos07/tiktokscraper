@@ -74,14 +74,15 @@ def get_jobs(status=None, limit=50):
         return []
 
 
-def create_job(mode, value, limit, no_watermark, drive_folder_id=None):
+def create_job(mode, value, limit, no_watermark, drive_folder_id=None, generate_subtitles=False):
     """Create a new job"""
     try:
         payload = {
             "mode": mode,
             "value": value,
             "limit": limit,
-            "no_watermark": no_watermark
+            "no_watermark": no_watermark,
+            "generate_subtitles": generate_subtitles
         }
         
         if drive_folder_id:
@@ -239,7 +240,7 @@ st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
     "Navigation",
-    ["📊 Dashboard", "➕ Create Job", "📋 Jobs", "🎬 Videos", "🤖 Auto Monitoring", "⏰ Scheduled Jobs"]
+    ["📊 Dashboard", "➕ Create Job", "📋 Jobs", "🎬 Videos", "🤖 Auto Monitoring", "⏰ Scheduled Jobs", "⚙️ Settings"]
 )
 
 st.sidebar.markdown("---")
@@ -410,6 +411,7 @@ elif page == "➕ Create Job":
         with col2:
             limit = st.number_input("Number of Videos", min_value=1, max_value=200, value=50)
             no_watermark = st.checkbox("Download without watermark", value=True)
+            generate_subtitles = st.checkbox("Generate Arabic Subtitles", value=False, help="Generate and embed Arabic subtitles in videos")
         
         drive_folder_id = st.text_input(
             "Google Drive Folder ID (Optional)",
@@ -424,7 +426,7 @@ elif page == "➕ Create Job":
                 st.error("Please enter a username or hashtag")
             else:
                 with st.spinner("Creating job..."):
-                    job = create_job(mode, value, limit, no_watermark, drive_folder_id or None)
+                    job = create_job(mode, value, limit, no_watermark, drive_folder_id or None, generate_subtitles)
                     
                     if job:
                         st.success(f"✅ Job created successfully! Job ID: {job['id']}")
@@ -700,11 +702,49 @@ elif page == "🎬 Videos":
                 "Likes": f"{video['likes']:,}",
                 "Size": f"{video['file_size'] / (1024**2):.2f} MB" if video['file_size'] else "N/A",
                 "Watermark": "❌" if video['has_watermark'] else "✅",
-                "Drive": "✅" if video['drive_file_id'] else "❌"
+                "Drive": "✅" if video['drive_file_id'] else "❌",
+                "URL": video['url']
             })
         
         df = pd.DataFrame(videos_list)
         st.dataframe(df, use_container_width=True)
+        
+        # Download section
+        st.markdown("---")
+        st.subheader("📥 Download Videos")
+        
+        for video in videos_data['videos']:
+            col1, col2, col3 = st.columns([3, 1, 1])
+            
+            with col1:
+                st.write(f"**{video['author_username']}** - {video['id']}")
+            
+            with col2:
+                if video['drive_file_id']:
+                    drive_link = f"https://drive.google.com/file/d/{video['drive_file_id']}/view"
+                    st.link_button("🔗 Drive", drive_link)
+            
+            with col3:
+                if st.button(f"💾 Download", key=f"download_{video['id']}"):
+                    try:
+                        download_url = f"{API_BASE_URL}/videos/{video['id']}/download"
+                        response = requests.get(download_url, stream=True)
+                        
+                        if response.status_code == 200:
+                            filename = f"{video['author_username']}_{video['id']}.mp4"
+                            
+                            # Create download button
+                            st.download_button(
+                                label="⬇️ Save File",
+                                data=response.content,
+                                file_name=filename,
+                                mime="video/mp4",
+                                key=f"save_{video['id']}"
+                            )
+                        else:
+                            st.error("Video not available for download")
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
     else:
         st.info("No videos found")
 
@@ -772,3 +812,134 @@ elif page == "⏰ Scheduled Jobs":
                         if job:
                             st.success(f"✅ Scheduled job created successfully!")
                             st.json(job)
+
+
+elif page == "⚙️ Settings":
+    st.markdown('<div class="main-header">⚙️ Settings</div>', unsafe_allow_html=True)
+    
+    st.subheader("🔐 Google Drive Configuration")
+    
+    st.info("""
+    **How to get Google Drive credentials:**
+    1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+    2. Create a new project or select existing
+    3. Enable Google Drive API
+    4. Create OAuth 2.0 credentials
+    5. Download credentials.json
+    6. Paste the content below
+    """)
+    
+    with st.form("google_drive_settings"):
+        st.write("### Google Drive Credentials")
+        
+        credentials_json = st.text_area(
+            "Credentials JSON",
+            height=200,
+            placeholder='Paste your credentials.json content here',
+            help="Paste the entire content of your downloaded credentials.json file"
+        )
+        
+        folder_id = st.text_input(
+            "Default Google Drive Folder ID",
+            placeholder="1eJ0IpGpy7KrHkh_157n-qBM04WQCCDc_",
+            help="The folder ID where videos will be uploaded by default"
+        )
+        
+        st.markdown("---")
+        st.write("### Subtitle Settings")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            enable_subtitles = st.checkbox(
+                "Enable Subtitle Generation",
+                value=False,
+                help="Automatically generate Arabic subtitles for videos"
+            )
+        
+        with col2:
+            subtitle_language = st.selectbox(
+                "Subtitle Language",
+                ["Arabic", "English", "Both"],
+                help="Language for subtitle generation"
+            )
+        
+        submitted = st.form_submit_button("💾 Save Settings", type="primary")
+        
+        if submitted:
+            if credentials_json:
+                try:
+                    import json
+                    import base64
+                    
+                    # Validate JSON
+                    creds_data = json.loads(credentials_json)
+                    
+                    # Save to file
+                    with open("credentials/credentials.json", "w") as f:
+                        json.dump(creds_data, f, indent=2)
+                    
+                    # Also save as base64 for cloud deployment
+                    creds_b64 = base64.b64encode(credentials_json.encode()).decode()
+                    
+                    # Save to .env file
+                    env_content = f"""
+GOOGLE_DRIVE_CREDENTIALS_BASE64={creds_b64}
+GOOGLE_DRIVE_ROOT_FOLDER_ID={folder_id}
+ENABLE_SUBTITLES={enable_subtitles}
+SUBTITLE_LANGUAGE={subtitle_language}
+"""
+                    
+                    with open(".env", "a") as f:
+                        f.write(env_content)
+                    
+                    st.success("✅ Settings saved successfully!")
+                    st.success("🔄 Please restart the application for changes to take effect")
+                    
+                    st.code(f"""
+Credentials saved to: credentials/credentials.json
+Folder ID: {folder_id}
+Subtitles: {'Enabled' if enable_subtitles else 'Disabled'}
+Language: {subtitle_language}
+""")
+                    
+                except json.JSONDecodeError:
+                    st.error("❌ Invalid JSON format. Please check your credentials.")
+                except Exception as e:
+                    st.error(f"❌ Error saving settings: {str(e)}")
+            else:
+                st.warning("⚠️ Please paste your credentials JSON")
+    
+    st.markdown("---")
+    
+    st.subheader("📊 Current Configuration")
+    
+    try:
+        import os
+        from pathlib import Path
+        
+        creds_file = Path("credentials/credentials.json")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.metric("Credentials File", "✅ Exists" if creds_file.exists() else "❌ Missing")
+            st.metric("API URL", API_BASE_URL)
+        
+        with col2:
+            env_folder_id = os.getenv("GOOGLE_DRIVE_ROOT_FOLDER_ID", "Not set")
+            st.metric("Folder ID", env_folder_id)
+            st.metric("Subtitles", os.getenv("ENABLE_SUBTITLES", "Disabled"))
+        
+        if creds_file.exists():
+            st.success("✅ Google Drive is configured")
+            
+            with st.expander("View Credentials"):
+                with open(creds_file, "r") as f:
+                    creds_content = f.read()
+                st.code(creds_content, language="json")
+        else:
+            st.warning("⚠️ Google Drive credentials not found. Please configure above.")
+    
+    except Exception as e:
+        st.error(f"Error loading configuration: {str(e)}")

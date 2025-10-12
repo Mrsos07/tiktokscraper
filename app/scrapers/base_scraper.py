@@ -79,8 +79,8 @@ class BaseScraper(ABC):
         await asyncio.sleep(delay)
     
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10)
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=2, min=8, max=30)
     )
     async def _fetch_page(self, url: str) -> str:
         """Fetch page HTML with retries"""
@@ -90,10 +90,18 @@ class BaseScraper(ABC):
         log.info(f"Fetching URL: {url}")
         
         try:
-            response = await self.session.get(url)
-            response.raise_for_status()
-            
+            # Add delay before request to avoid rate limiting
             await self._random_delay()
+            
+            response = await self.session.get(url)
+            
+            # Handle rate limiting
+            if response.status_code == 429:
+                log.warning(f"Rate limited! Waiting 30 seconds...")
+                await asyncio.sleep(30)
+                raise httpx.HTTPStatusError("Rate limited", request=response.request, response=response)
+            
+            response.raise_for_status()
             
             return response.text
         except httpx.HTTPStatusError as e:

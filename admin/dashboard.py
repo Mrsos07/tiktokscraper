@@ -313,54 +313,62 @@ if page == "📊 Dashboard":
         import asyncio
         
         async def get_monitoring_stats():
-            async for db in get_db():
-                result = await db.execute(
-                    select(MonitoredAccount).where(MonitoredAccount.enabled == True)
-                )
-                accounts = result.scalars().all()
-                
-                total_accounts = len(accounts)
-                total_checks = sum(acc.total_checks for acc in accounts)
-                total_new_videos = sum(acc.total_new_videos for acc in accounts)
-                
-                return {
-                    'total_accounts': total_accounts,
-                    'total_checks': total_checks,
-                    'total_new_videos': total_new_videos,
-                    'accounts': accounts
-                }
+            try:
+                async for db in get_db():
+                    result = await db.execute(
+                        select(MonitoredAccount).where(MonitoredAccount.enabled == True)
+                    )
+                    accounts = result.scalars().all()
+                    
+                    total_accounts = len(accounts)
+                    total_checks = sum(acc.total_checks for acc in accounts)
+                    total_new_videos = sum(acc.total_new_videos for acc in accounts)
+                    
+                    return {
+                        'total_accounts': total_accounts,
+                        'total_checks': total_checks,
+                        'total_new_videos': total_new_videos,
+                        'accounts': accounts
+                    }
+            except Exception as e:
+                # Table doesn't exist yet
+                return None
         
         monitoring_stats = asyncio.run(get_monitoring_stats())
         
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric("Monitored Accounts", monitoring_stats['total_accounts'])
-        with col2:
-            st.metric("Total Checks", monitoring_stats['total_checks'])
-        with col3:
-            st.metric("New Videos Found", monitoring_stats['total_new_videos'])
-        with col4:
-            if monitoring_stats['total_checks'] > 0:
-                success_rate = (monitoring_stats['total_new_videos'] / monitoring_stats['total_checks']) * 100
-                st.metric("Success Rate", f"{success_rate:.1f}%")
-            else:
-                st.metric("Success Rate", "N/A")
-        
-        # Show recent monitored accounts
-        if monitoring_stats['accounts']:
-            st.write("**Recent Activity:**")
-            for acc in monitoring_stats['accounts'][:5]:
-                col1, col2, col3 = st.columns([2, 1, 1])
-                with col1:
-                    st.write(f"@{acc.username}")
-                with col2:
-                    st.write(f"✅ {acc.total_new_videos} videos")
-                with col3:
-                    st.write(f"🔍 {acc.total_checks} checks")
+        if monitoring_stats:
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Monitored Accounts", monitoring_stats['total_accounts'])
+            with col2:
+                st.metric("Total Checks", monitoring_stats['total_checks'])
+            with col3:
+                st.metric("New Videos Found", monitoring_stats['total_new_videos'])
+            with col4:
+                if monitoring_stats['total_checks'] > 0:
+                    success_rate = (monitoring_stats['total_new_videos'] / monitoring_stats['total_checks']) * 100
+                    st.metric("Success Rate", f"{success_rate:.1f}%")
+                else:
+                    st.metric("Success Rate", "N/A")
+            
+            # Show recent monitored accounts
+            if monitoring_stats['accounts']:
+                st.write("**Recent Activity:**")
+                for acc in monitoring_stats['accounts'][:5]:
+                    col1, col2, col3 = st.columns([2, 1, 1])
+                    with col1:
+                        st.write(f"@{acc.username}")
+                    with col2:
+                        st.write(f"✅ {acc.total_new_videos} videos")
+                    with col3:
+                        st.write(f"🔍 {acc.total_checks} checks")
+        else:
+            st.warning("⚠️ Auto Monitoring table not initialized. Please run database init from API.")
+            st.info("Go to: `/api/v1/database/init` to create missing tables")
     
     except Exception as e:
-        st.warning("Auto Monitoring: Not configured yet")
+        st.warning("⚠️ Auto Monitoring: Database not initialized")
     
     st.markdown("---")
     
@@ -543,15 +551,43 @@ elif page == "🤖 Auto Monitoring":
             import asyncio
             
             async def get_accounts_data():
-                async for db in get_db():
-                    result = await db.execute(
-                        select(MonitoredAccount).where(MonitoredAccount.enabled == True)
-                    )
-                    return result.scalars().all()
+                try:
+                    async for db in get_db():
+                        result = await db.execute(
+                            select(MonitoredAccount).where(MonitoredAccount.enabled == True)
+                        )
+                        return result.scalars().all()
+                except Exception as e:
+                    # Table doesn't exist
+                    return None
             
             accounts = asyncio.run(get_accounts_data())
             
-            if accounts:
+            if accounts is None:
+                st.error("⚠️ Auto Monitoring table not found!")
+                st.info("""
+                **To fix this issue:**
+                Click the button below to initialize the database tables.
+                """)
+                
+                if st.button("🔧 Initialize Database Tables", type="primary"):
+                    with st.spinner("Initializing database..."):
+                        try:
+                            response = requests.post(f"{API_BASE_URL}/database/init")
+                            if response.status_code == 200:
+                                st.success("✅ Database initialized successfully!")
+                                st.balloons()
+                                time.sleep(2)
+                                st.rerun()
+                            else:
+                                st.error(f"❌ Error: {response.text}")
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)}")
+                
+                st.markdown("---")
+                st.write("**Or manually:**")
+                st.code("POST https://tiktok-scraper-api-ulzl.onrender.com/api/v1/database/init")
+            elif accounts:
                 for account in accounts:
                     status_icon = "✅" if account.enabled else "⏸️"
                     

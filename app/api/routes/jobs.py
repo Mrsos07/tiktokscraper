@@ -12,6 +12,7 @@ from app.models.schemas import (
 )
 from app.workers.job_processor import JobProcessor
 from app.core.logging import log
+from app.core.job_queue import job_queue
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -50,8 +51,12 @@ async def create_job(
         
         log.info(f"Created job {job.id}: {job.mode}={job.value}")
         
-        # Process job in background
-        background_tasks.add_task(process_job_background, job.id)
+        # Add job to queue instead of processing immediately
+        await job_queue.add_job(job.id, process_job_background, job.id)
+        
+        # Return job with queue info
+        queue_size = job_queue.get_queue_size()
+        log.info(f"Job {job.id} added to queue. Queue size: {queue_size}")
         
         return job
         

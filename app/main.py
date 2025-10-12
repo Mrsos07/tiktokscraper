@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.logging import log
 from app.models.database import init_db
-from app.api.routes import jobs, videos, scheduler, stats, monitoring, cleanup, database
+from app.api.routes import jobs, videos, scheduler, stats, cleanup, database
 
 
 @asynccontextmanager
@@ -90,7 +90,6 @@ app.include_router(jobs.router, prefix="/api/v1")
 app.include_router(videos.router, prefix="/api/v1")
 app.include_router(scheduler.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
-app.include_router(monitoring.router)
 app.include_router(cleanup.router)
 app.include_router(database.router)
 

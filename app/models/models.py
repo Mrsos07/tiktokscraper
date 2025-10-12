@@ -152,33 +152,6 @@ class Video(Base):
         }
 
 
-class MonitoredAccount(Base):
-    """Model for accounts being monitored by Auto Scraper"""
-    __tablename__ = "monitored_accounts"
-    
-    id = Column(String, primary_key=True, index=True)
-    username = Column(String, nullable=False, unique=True, index=True)
-    
-    # Tracking
-    last_video_id = Column(String, nullable=True)  # ID of last seen video
-    last_check_at = Column(DateTime, nullable=True)
-    last_new_video_at = Column(DateTime, nullable=True)
-    
-    # Settings
-    enabled = Column(Boolean, default=True, index=True)
-    check_interval_minutes = Column(Integer, default=60)
-    
-    # Stats
-    total_checks = Column(Integer, default=0)
-    total_new_videos = Column(Integer, default=0)
-    
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    def __repr__(self):
-        return f"<MonitoredAccount @{self.username} - enabled={self.enabled}>"
-
-
 class ScheduledJob(Base):
     """Model for scheduled recurring jobs"""
     __tablename__ = "scheduled_jobs"

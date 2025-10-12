@@ -28,12 +28,6 @@ async def lifespan(app: FastAPI):
         log.error(f"Database initialization failed: {e}")
         raise
     
-    # Start auto scraper
-    from app.scheduler.auto_scraper import auto_scraper
-    import asyncio
-    asyncio.create_task(auto_scraper.start())
-    log.info("Auto Scraper started")
-    
     # Start cleanup task
     from app.scheduler.cleanup_task import cleanup_task
     asyncio.create_task(cleanup_task.start())

@@ -144,8 +144,8 @@ def scrape_and_download_sync(username: str, limit: int = 1, output_dir: Path = N
         return []
 
 
-async def scrape_and_download(username: str, limit: int = 1, output_dir: Path = None) -> List[Dict]:
+async def scrape_and_download(username: str, limit: int = 1, output_dir: Path = None, is_hashtag: bool = False) -> List[Dict]:
     """Async wrapper"""
     import asyncio
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, scrape_and_download_sync, username, limit, output_dir)
+    return await loop.run_in_executor(None, scrape_and_download_sync, username, limit, output_dir, is_hashtag)

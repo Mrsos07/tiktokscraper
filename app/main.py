@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.logging import log
 from app.models.database import init_db
 from app.api.routes import jobs, videos, scheduler, stats, cleanup, database
+from app.middleware import RateLimitMiddleware
 
 
 @asynccontextmanager
@@ -62,6 +63,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Rate limiting middleware
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=settings.RATE_LIMIT_REQUESTS_PER_MINUTE,
+    burst=settings.RATE_LIMIT_BURST
 )
 
 

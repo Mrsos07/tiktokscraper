@@ -47,8 +47,8 @@ class Settings(BaseSettings):
     TIKTOK_USE_PLAYWRIGHT_FALLBACK: bool = True
     
     # Rate Limiting
-    RATE_LIMIT_REQUESTS_PER_MINUTE: int = 120
-    RATE_LIMIT_BURST: int = 200
+    RATE_LIMIT_REQUESTS_PER_MINUTE: int = 60
+    RATE_LIMIT_BURST: int = 100
     
     # Proxy
     USE_PROXY: bool = False
